@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  labels:
+    app: backend
+spec:
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend-spring
+          image: zckoh/help-queue-spring:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: RDS_DB_HOSTNAME
+              value: "default_hostname"
+            - name: RDS_DB_PORT
+              value: "default_port"
+            - name: RDS_DB_USERNAME
+              value: "default_username"
+            - name: RDS_DB_PASSWORD
+              value: "default_password"
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend

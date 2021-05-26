@@ -1,0 +1,60 @@
+---
+- hosts: jenkins
+  become: true
+  tasks:
+  - name: install wget
+    yum:
+      name: wget
+      state: present
+  - name: "Install curl"
+    apt:
+      name: curl
+      state: latest
+      update_cache: true
+
+  - name: Check if Docker Service Exists
+    stat: path=/etc/init.d/docker
+    register: docker_service_status
+
+  - name: Install docker
+    shell: curl https://get.docker.com | sh
+    when: not docker_service_status.stat.exists
+    args:
+      warn: false
+
+  - name: Check if Jenkins War File Exists
+    stat: path=/home/jenkins/jenkins.war
+    register: jenkins_service_status
+
+  - name: Install Java 8 and Jenkins if Jenkins service not exist
+    when: not jenkins_service_status.stat.exists
+    block:
+      - name: Install Java 8 using YUM.
+        yum:
+          name: "openjdk-8-jre"
+          state: latest
+        become: true
+
+      - name: Run jenkins_install script
+        script: ./scripts/jenkins_install.sh
+
+      - name: Get Jenkins Initial Password
+        become: true
+        shell: su - jenkins -c "cat .jenkins/secrets/initialAdminPassword"
+        changed_when: false
+        args:
+          warn: false
+        register: result
+
+      - name: Print Jenkins Initial Password
+        debug:
+          var: result.stdout
+
+      - name: Add jenkins user to docker user group
+        become: true
+        shell: usermod -aG docker jenkins
+
+      - name: Restart Jenkins service
+        service:
+          name: jenkins
+          state: restarted
